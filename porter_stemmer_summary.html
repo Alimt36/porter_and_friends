@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porter Stemmer: Cheat Sheet</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#14213d; --muted:#5b6678; --line:#d9dfe8;
+  --accent:#0f766e; --bad:#b42318; --good:#0f766e;
+  --term-bg:#0f172a; --term-ink:#d6e2f0; --term-dim:#7c8aa0; --term-hi:#5eead4; --term-bad:#fca5a5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1220; --card:#121b2e; --ink:#e6edf7; --muted:#97a3b8; --line:#243049;
+    --accent:#5eead4; --bad:#fca5a5; --good:#5eead4;
+    --term-bg:#070d19;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1220; --card:#121b2e; --ink:#e6edf7; --muted:#97a3b8; --line:#243049;
+  --accent:#5eead4; --bad:#fca5a5; --good:#5eead4; --term-bg:#070d19;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:12px}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.5 "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:920px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:2rem;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 22px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+nav a{color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--card);
+  padding:5px 12px;border-radius:999px;font-size:.9rem}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
+section{margin:0 0 34px}
+h2{font-size:1.35rem;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+h3{font-size:1.02rem;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+ul{margin:4px 0 0;padding-left:18px}
+li{margin:2px 0}
+.tag{display:inline-block;font-size:.8rem;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:6px}
+.term{background:var(--term-bg);color:var(--term-ink);border-radius:10px;padding:14px 16px;margin:12px 0;
+  font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre}
+.term .t{color:var(--term-dim)}
+.term .hi{color:var(--term-hi)}
+.term .bad{color:var(--term-bad)}
+.cap{font-size:.85rem;color:var(--muted);margin:-4px 0 12px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem;background:var(--card);border:1px solid var(--line)}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:color-mix(in srgb,var(--accent) 12%,var(--card));font-weight:600}
+td.y{color:var(--good);font-weight:600}
+td.n{color:var(--bad);font-weight:600}
+.steps{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0;padding:0;list-style:none}
+.steps li{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:8px 10px;margin:0}
+.steps b{display:block}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
+.pill b{color:var(--accent)}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 12px;cursor:pointer;float:right}
+button:focus-visible{outline:2px solid var(--accent)}
+@media print{button,nav{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<main>
+<button id="themeBtn" type="button" aria-label="Toggle dark or light theme">Theme</button>
+<h1>Porter Stemmer</h1>
+<p class="sub">Information Retrieval: key words + real demo output</p>
+
+<nav>
+  <a href="#porter">Porter</a>
+  <a href="#others">Other algorithms</a>
+  <a href="#compare">Comparisons</a>
+  <a href="#pick">Which to use</a>
+</nav>
+
+<section id="porter">
+<h2>Porter (1980)</h2>
+<div class="grid">
+  <div class="card"><h3>Goal</h3><ul><li>Match word forms</li><li>connect / connected / connecting / connection</li></ul></div>
+  <div class="card"><h3>Method</h3><ul><li>Suffix stripping</li><li>Fixed rules, fixed order</li><li>No dictionary</li></ul></div>
+  <div class="card"><h3>Output</h3><ul><li>Stem, not a real word</li><li>happily &rarr; happili</li><li>university &rarr; univers</li></ul></div>
+</div>
+
+<h3 style="margin-top:18px">5 steps</h3>
+<ol class="steps">
+  <li><b>Step 1</b>plurals, -ed, -ing, y&rarr;i</li>
+  <li><b>Step 2</b>long suffix &rarr; short (ational&rarr;ate)</li>
+  <li><b>Step 3</b>-icate, -ful, -ness</li>
+  <li><b>Step 4</b>drop -al, -ance, -ment</li>
+  <li><b>Step 5</b>final e, double l</li>
+</ol>
+
+<h3 style="margin-top:18px">Measure m</h3>
+<ul>
+  <li>Count of vowel-consonant blocks</li>
+  <li>Rule fires only if the remaining stem is big enough</li>
+  <li>Protects short words</li>
+</ul>
+
+<div class="term"><span class="t">Demo 3: trace of "generalizations" (my own Porter)</span>
+   step 1a : generalizations -&gt; <span class="hi">generalization</span>
+   step 2  : generalization  -&gt; <span class="hi">generalize</span>
+   step 3  : generalize      -&gt; <span class="hi">general</span>
+   step 4  : general         -&gt; <span class="hi">gener</span>
+   FINAL   : gener
+
+<span class="t">Demo 3: measure</span>
+   m(tree)     = 0
+   m(trouble)  = 1
+   m(troubles) = 2
+
+<span class="t">Check vs NLTK original</span>
+   words tested: 125   identical: 125   agreement: <span class="hi">100.0%</span></div>
+</section>
+
+<section id="others">
+<h2>Other algorithms</h2>
+<div class="grid">
+  <div class="card"><h3>Lovins <span class="tag">1968</span></h3><ul><li>First stemmer</li><li>One pass, longest ending</li><li>~300 endings</li><li>Fast, crude</li></ul></div>
+  <div class="card"><h3>Lancaster <span class="tag">1990</span></h3><ul><li>Paice / Husk</li><li>Rule table, repeated</li><li>Very aggressive</li><li>Short stems</li></ul></div>
+  <div class="card"><h3>Snowball / Porter2 <span class="tag">2000s</span></h3><ul><li>Porter's own upgrade</li><li>Special words handled</li><li>Many languages</li><li>Default choice</li></ul></div>
+  <div class="card"><h3>Krovetz <span class="tag">1993</span></h3><ul><li>Dictionary based</li><li>Inflections only</li><li>Real words</li><li>Very gentle</li></ul></div>
+  <div class="card"><h3>Lemmatization <span class="tag">not a stemmer</span></h3><ul><li>Dictionary + grammar</li><li>True base word</li><li>Slower</li><li>Needs part of speech</li></ul></div>
+  <div class="card"><h3>NLTK Porter modes</h3><ul><li>ORIGINAL</li><li>MARTIN_EXTENSIONS</li><li>NLTK_EXTENSIONS</li><li>Same algorithm, patched</li></ul></div>
+</div>
+</section>
+
+<section id="compare">
+<h2>Comparisons (our demo output)</h2>
+
+<h3>Demo 1: same words, different stems</h3>
+<div class="wrap"><table>
+<tr><th>word</th><th>Porter</th><th>Snowball</th><th>Lancaster</th></tr>
+<tr><td>generalization</td><td>gener</td><td>general</td><td>gen</td></tr>
+<tr><td>sportingly</td><td>sportingli</td><td>sport</td><td>sport</td></tr>
+<tr><td>happily</td><td>happili</td><td>happili</td><td>happy</td></tr>
+<tr><td>studies</td><td>studi</td><td>studi</td><td>study</td></tr>
+<tr><td>transparent</td><td>transpar</td><td>transpar</td><td>transp</td></tr>
+<tr><td>organization</td><td>organ</td><td>organ</td><td>org</td></tr>
+<tr><td>mice</td><td>mice</td><td>mice</td><td>mic</td></tr>
+<tr><td>better</td><td>better</td><td>better</td><td>bet</td></tr>
+</table></div>
+<div class="term"><span class="t">Demo 1 summary (20 words)</span>
+Porter vs Snowball  : differ on <span class="hi">3/20</span>
+Porter vs Lancaster : differ on <span class="bad">15/20</span>
+avg stem length     : Porter=5.8   Snowball=5.7   Lancaster=<span class="bad">4.4</span></div>
+
+<h3>Demo 2: mistakes</h3>
+<div class="pill-row">
+  <div class="pill"><b>Under-stemming</b> related words not merged: run / ran, data / datum</div>
+  <div class="pill"><b>Over-stemming</b> unrelated words merged: university / universe</div>
+</div>
+<div class="term" style="margin-top:12px"><span class="t">Demo 2: over-stemming errors (8 unrelated pairs)</span>
+Porter    = <span class="bad">4/8</span>
+Snowball  = <span class="hi">3/8</span>
+Lancaster = <span class="bad">6/8</span>
+
+<span class="t">Under-stemming: related pairs missed (8 pairs)</span>
+Porter    = 8/8 missed
+Snowball  = 8/8 missed
+Lancaster = 5/8 missed   <span class="t">(merged data/datum, analysis/analyses, believe/belief)</span>
+
+<span class="t">Examples</span>
+university / universe   -&gt; univers, univers   <span class="bad">WRONG</span>
+past / paste            -&gt; past, past         <span class="bad">WRONG</span>
+news / new              -&gt; Porter: new,new <span class="bad">WRONG</span>   Snowball: news,new ok</div>
+<p class="cap">More aggressive = fewer misses, more false matches. Trade-off.</p>
+
+<h3>Demo 4: speed (60,000 tokens, my machine)</h3>
+<div class="term">PyStemmer (C Snowball)   4,693,631 words/sec   <span class="hi">1x</span>
+Snowball (NLTK)           205,992 words/sec  22.8x
+Lancaster                 135,514 words/sec  34.6x
+Porter (all modes)       ~118,000 words/sec  ~40x</div>
+<p class="cap">Your numbers will differ. Ranking should match. C version wins by far.</p>
+
+<h3>Demo 5: search effect (10 documents)</h3>
+<div class="term"><span class="t">Index vocabulary</span>
+No stemming  48 terms
+Porter       38 terms  (<span class="hi">20.8% smaller</span>)
+Snowball     39 terms  (18.8% smaller)
+Lancaster    37 terms  (22.9% smaller)
+
+<span class="t">query: 'run'   [ideal: d1 d2 d6]</span>
+No stemming  -&gt; <span class="bad">(nothing)</span>
+Porter       -&gt; <span class="hi">d1 d2 d6</span>
+
+<span class="t">query: 'university'   [ideal: d4 d9]</span>
+No stemming  -&gt; d9            <span class="bad">missed: d4</span>
+Porter       -&gt; d4 d9 d10    <span class="bad">false hit: d10</span> <span class="t">(the "universe" document)</span></div>
+
+<h3>Demo 6: stemming vs lemmatization</h3>
+<div class="wrap"><table>
+<tr><th>word</th><th>Porter</th><th>Snowball</th><th>Lancaster</th><th>Lemma</th></tr>
+<tr><td>better</td><td>better</td><td>better</td><td>bet</td><td class="y">good</td></tr>
+<tr><td>mice</td><td>mice</td><td>mice</td><td>mic</td><td class="y">mouse</td></tr>
+<tr><td>went</td><td>went</td><td>went</td><td>went</td><td class="y">go</td></tr>
+<tr><td>was</td><td>wa</td><td>was</td><td>was</td><td class="y">be</td></tr>
+</table></div>
+</section>
+
+<section id="pick">
+<h2>Which one to use</h2>
+<div class="wrap"><table>
+<tr><th></th><th>Porter</th><th>Snowball</th><th>Lancaster</th><th>Krovetz</th><th>Lemmatizer</th></tr>
+<tr><td>Strength</td><td>moderate</td><td>moderate</td><td class="n">very strong</td><td>very light</td><td>exact</td></tr>
+<tr><td>Real words</td><td class="n">no</td><td class="n">no</td><td class="n">no</td><td class="y">yes</td><td class="y">yes</td></tr>
+<tr><td>Speed</td><td class="y">fast</td><td class="y">fast</td><td class="y">fast</td><td>medium</td><td class="n">slow</td></tr>
+<tr><td>Needs dictionary</td><td>no</td><td>no</td><td>no</td><td>yes</td><td>yes</td></tr>
+<tr><td>Best for</td><td>classic IR, baseline</td><td>default pick</td><td>max recall</td><td>precision</td><td>NLP quality</td></tr>
+</table></div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h3>Takeaways</h3><ul><li>Stemming = recall up</li><li>Over-stemming = precision down</li><li>No stemmer is perfect</li></ul></div>
+  <div class="card"><h3>Caveat</h3><ul><li>Tiny hand-picked lists</li><li>Illustrates, doesn't prove</li><li>Real gain: modest for English</li></ul></div>
+</div>
+</section>
+</main>
+<script>
+(function(){
+  var btn=document.getElementById('themeBtn');
+  var root=document.documentElement;
+  btn.addEventListener('click',function(){
+    var dark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur=root.getAttribute('data-theme')||(dark?'dark':'light');
+    root.setAttribute('data-theme',cur==='dark'?'light':'dark');
+  });
+})();
+</script>
+</body>
+</html>

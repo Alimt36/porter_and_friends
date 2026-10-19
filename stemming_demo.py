@@ -1,9 +1,4 @@
-"""
-Porter stemmer: live demo for an Information Retrieval course.
-Run:  python stemming_demo.py            (pauses between demos)
-      python stemming_demo.py --no-pause (runs everything at once)
-      python stemming_demo.py --demo 3   (runs a single demo)
-"""
+
 import argparse
 import random
 import re
